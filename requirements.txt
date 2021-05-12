@@ -8,6 +8,6 @@ django-cors-headers>=3.2.1
 humanize
 django-dynamic-raw-id>=2.6
 gunicorn
-uvicorn
+uvicorn[standard]
 channels
 appicon
