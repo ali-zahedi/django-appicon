@@ -25,11 +25,11 @@ class AppIconSummarySerializer(DataModelSummarySerializer):
         ]
 
     def get_link_logo(self, obj):
-        return obj.file.url
+        return self.context['request'].build_absolute_uri(obj.file.url)
 
     def get_link_archive(self, obj):
         if obj.archive and hasattr(obj.archive, 'url'):
-            return obj.archive.url
+            return self.context['request'].build_absolute_uri(obj.archive.url)
         return None
 
 
