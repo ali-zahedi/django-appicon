@@ -1,16 +1,16 @@
 stages:
-  - version
-  - development
+  - fetch-version
   - production
-
+  - release
 
 variables:
   AUTHOR: 'Ali Zahedigol'
 
+
 .node: &node
   image: node:13
-#  before_script:
-#    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  #  before_script:
+  #    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
   tags:
     - node
 
@@ -24,28 +24,23 @@ variables:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    - apt-get update -qy
-    - apt-get install -y ruby-dev
-    - gem install dpl
   tags:
     - python
 
-
-version:
+fetch-version:
   # Requires Node >= 10.13 version
   <<: *node
-  stage: version
+  stage: fetch-version
   only:
     refs:
-    - master
-    - develop
+      - master
+      - develop
   script:
     - npm install @semantic-release/gitlab @semantic-release/exec @semantic-release/changelog
-    - npx semantic-release
+    - npx semantic-release --generate-notes false --dry-run
   artifacts:
     paths:
-    - VERSION.txt
-
+      - VERSION.txt
 
 production:
   <<: *python
@@ -53,10 +48,25 @@ production:
   environment:
     name: production
   script:
-    - echo "Version is $(cat VERSION.txt)"
-    - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY
-    - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY --run='python manage.py migrate && python manage.py collectstatic --noinput '
+    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd $DEPLOY_PATH && git reset --hard && sed -i 's/^VERSION_NUMBER.*/VERSION_NUMBER=$(cat VERSION.txt)/' .env && git pull && source .activate && python manage.py migrate && supervisorctl restart moniaz && supervisorctl restart moniaz_celery_worker && python manage.py collectstatic --noinput && exit"
   only:
     - master
   dependencies:
-    - version
+    - fetch-version
+
+release:
+  <<: *node
+  stage: release
+  only:
+    refs:
+      - master
+      - develop
+  script:
+    - touch CHANGELOG.md
+    - npm install @semantic-release/gitlab @semantic-release/changelog @semantic-release/exec
+    - npx semantic-release
+  artifacts:
+    paths:
+      - CHANGELOG.md
+  dependencies:
+    - production
