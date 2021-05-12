@@ -37,7 +37,9 @@ class FileType(models.IntegerChoices):
             FileType.PRESENTATION: [],
             FileType.SPREADSHEET: [],
             FileType.WORD: [],
-            FileType.COMPRESS: [],
+            FileType.COMPRESS: [
+                'application/zip',
+            ],
             FileType.TEXT: [
                 'text/plain',
             ],

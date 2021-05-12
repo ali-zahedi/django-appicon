@@ -8,9 +8,11 @@ from utilities.admin import DataModelAdmin
 class AppIconAdmin(DataModelAdmin):
     fields = [
         'file',
+        'archive',
     ]
     list_display = [
         'file',
+        'archive',
     ]
     list_filter = [
     ]
