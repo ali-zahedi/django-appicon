@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     # third party apps
     # 'debug_toolbar',
     # my apps
+    'appicons',
 ]
 
 MIDDLEWARE = [
