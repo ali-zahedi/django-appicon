@@ -1,7 +1,8 @@
 stages:
-  - version
+  - fetch-version
   - development
   - production
+  - release
 
 
 variables:
@@ -24,27 +25,37 @@ variables:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
-    - apt-get update -qy
-    - apt-get install -y ruby-dev
-    - gem install dpl
   tags:
     - python
 
 
-version:
+fetch-version:
   # Requires Node >= 10.13 version
   <<: *node
-  stage: version
+  stage: fetch-version
   only:
     refs:
     - master
     - develop
   script:
     - npm install @semantic-release/gitlab @semantic-release/exec @semantic-release/changelog
-    - npx semantic-release
+    - npx semantic-release --generate-notes false --dry-run
   artifacts:
     paths:
     - VERSION.txt
+
+
+development:
+  <<: *python
+  stage: development
+  environment:
+    name: development
+  script:
+    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd /home/'$DEPLOY_USERNAME'/'$DEPLOY_USERNAME' && git reset --hard && git pull && source .activate && pip install -r requirements.txt  && python manage.py collectstatic --noinput && python manage.py migrate && supervisorctl restart '$DEPLOY_USERNAME' && supervisorctl restart '$DEPLOY_USERNAME'_celery_worker && supervisorctl restart '$DEPLOY_USERNAME'_celery_beat && exit"
+  only:
+    - develop
+  dependencies:
+    - fetch-version
 
 
 production:
@@ -54,9 +65,26 @@ production:
     name: production
   script:
     - echo "Version is $(cat VERSION.txt)"
-    - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY
-    - dpl --provider=heroku --app=$HEROKU_APP_PRODUCTION --api-key=$HEROKU_API_KEY --run='python manage.py migrate && python manage.py collectstatic --noinput '
+    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd /home/'$PRODUCTION_USERNAME'/'$PRODUCTION_USERNAME' && git reset --hard && git pull && source .activate && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && supervisorctl restart '$PRODUCTION_USERNAME' && supervisorctl restart '$PRODUCTION_USERNAME'_celery_worker && supervisorctl restart '$PRODUCTION_USERNAME'_celery_beat && exit"
   only:
     - master
   dependencies:
-    - version
+    - fetch-version
+
+
+release:
+  <<: *node
+  stage: release
+  only:
+    refs:
+    - master
+    - develop
+  script:
+    - touch CHANGELOG.md
+    - npm install @semantic-release/gitlab @semantic-release/changelog @semantic-release/exec
+    - npx semantic-release
+  artifacts:
+    paths:
+    - CHANGELOG.md
+  dependencies:
+    - production

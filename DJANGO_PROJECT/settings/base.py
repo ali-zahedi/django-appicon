@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     # third party apps
     # 'debug_toolbar',
     # my apps
+    'appicons',
 ]
 
 MIDDLEWARE = [
@@ -202,3 +203,7 @@ REST_FRAMEWORK = {
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]

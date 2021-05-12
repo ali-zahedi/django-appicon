@@ -2,19 +2,35 @@
 
 [[_TOC_]]
 
-### Postman
+## How to setup dependency?
 
-#### Collection
-TODO: it should be update
-[Link postman collection](!!!!) 
-
-#### Env collection
-TODO: it should be update
-```json
-!!!!
+```shell script
+pip install -r requirements.txt
 ```
 
-### Domain
+## How to run it?
+
+```shell script
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+## API
+
+### How to upload with file?
+
+```shell script
+curl -X POST -F "file=@~/logo.png" https://api.appicon.org/api/icons/
+```
+
+### How to upload with link?
+
+```shell script
+curl -X POST -d "file_link=https://example.com/logo.png" https://api.appicon.org/api/icons/
+``` 
+
+## Domain
 
 [AppIcon](https://api.appicon.org)
 
