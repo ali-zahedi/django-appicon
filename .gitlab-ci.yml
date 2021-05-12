@@ -1,16 +1,17 @@
 stages:
   - fetch-version
+  - development
   - production
   - release
+
 
 variables:
   AUTHOR: 'Ali Zahedigol'
 
-
 .node: &node
   image: node:13
-  #  before_script:
-  #    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+#  before_script:
+#    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
   tags:
     - node
 
@@ -27,20 +28,35 @@ variables:
   tags:
     - python
 
+
 fetch-version:
   # Requires Node >= 10.13 version
   <<: *node
   stage: fetch-version
   only:
     refs:
-      - master
-      - develop
+    - master
+    - develop
   script:
     - npm install @semantic-release/gitlab @semantic-release/exec @semantic-release/changelog
     - npx semantic-release --generate-notes false --dry-run
   artifacts:
     paths:
-      - VERSION.txt
+    - VERSION.txt
+
+
+development:
+  <<: *python
+  stage: development
+  environment:
+    name: development
+  script:
+    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd /home/'$DEPLOY_USERNAME'/'$DEPLOY_USERNAME' && git reset --hard && git pull && source .activate && pip install -r requirements.txt  && python manage.py collectstatic --noinput && python manage.py migrate && supervisorctl restart '$DEPLOY_USERNAME' && supervisorctl restart '$DEPLOY_USERNAME'_celery_worker && supervisorctl restart '$DEPLOY_USERNAME'_celery_beat && exit"
+  only:
+    - develop
+  dependencies:
+    - fetch-version
+
 
 production:
   <<: *python
@@ -48,25 +64,27 @@ production:
   environment:
     name: production
   script:
-    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd $DEPLOY_PATH && git reset --hard && sed -i 's/^VERSION_NUMBER.*/VERSION_NUMBER=$(cat VERSION.txt)/' .env && git pull && source .activate && python manage.py migrate && supervisorctl restart moniaz && supervisorctl restart moniaz_celery_worker && python manage.py collectstatic --noinput && exit"
+    - echo "Version is $(cat VERSION.txt)"
+    - ssh -p "$DEPLOY_SERVER_PORT" "$USERNAME_DEPLOY_SERVER"@"$DEPLOY_SERVER" "cd /home/'$PRODUCTION_USERNAME'/'$PRODUCTION_USERNAME' && git reset --hard && git pull && source .activate && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && supervisorctl restart '$PRODUCTION_USERNAME' && supervisorctl restart '$PRODUCTION_USERNAME'_celery_worker && supervisorctl restart '$PRODUCTION_USERNAME'_celery_beat && exit"
   only:
     - master
   dependencies:
     - fetch-version
+
 
 release:
   <<: *node
   stage: release
   only:
     refs:
-      - master
-      - develop
+    - master
+    - develop
   script:
     - touch CHANGELOG.md
     - npm install @semantic-release/gitlab @semantic-release/changelog @semantic-release/exec
     - npx semantic-release
   artifacts:
     paths:
-      - CHANGELOG.md
+    - CHANGELOG.md
   dependencies:
     - production
