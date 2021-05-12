@@ -1,0 +1,13 @@
+Django==3.2
+psycopg2-binary>=2.8.5
+djangorestframework>=3.12.2
+markdown>=3.2.1
+django-filter>=2.2.0
+pillow>=7.1.1
+django-cors-headers>=3.2.1
+humanize
+django-dynamic-raw-id>=2.6
+gunicorn
+uvicorn
+channels
+appicon
